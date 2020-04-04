@@ -1,0 +1,23 @@
+version: "2.0"
+services:
+  mysql:
+    image: mysql:5.6
+    container_name: mysql-db
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: test
+      MYSQL_PASSWORD: test
+    ports:
+      - '3316:3306'
+    volumes:
+      - "/tmp/docker/spring/mysql/data:/var/lib/mysql"
+  redis:
+    image: redis
+    container_name: redis-db
+    command: redis-server --appendonly yes
+    ports:
+      - "6389:6379"
+    volumes:
+      - "/tmp/docker/spring/redis/data:/data"
