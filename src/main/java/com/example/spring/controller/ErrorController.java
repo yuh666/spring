@@ -12,8 +12,9 @@ import javax.servlet.http.HttpServletResponse;
 public class ErrorController {
 
 
-    @RequestMapping("/error")
-    public ResponseEntity<Object> error(HttpServletRequest request, HttpServletResponse response) {
-        return ResponseEntity.ok(response.getStatus());
-    }
+//    @RequestMapping("/error")
+//    public ResponseEntity<Object> error(HttpServletRequest request, HttpServletResponse response) {
+//        System.out.println("processing!!!");
+//        return ResponseEntity.ok(response.getStatus());
+//    }
 }

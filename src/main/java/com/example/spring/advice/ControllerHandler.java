@@ -13,6 +13,7 @@ public class ControllerHandler {
 
     @ExceptionHandler({Exception.class})
     public ResponseEntity<Object> handleException(Exception ex) {
+        ex.printStackTrace();
         return ResponseEntity.ok("ok");
     }
 

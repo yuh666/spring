@@ -1,6 +1,6 @@
 package com.example.spring;
 
-import com.example.spring.advice.ControllerHandler;
+//import com.example.spring.advice.ControllerHandler;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerA
 import org.springframework.context.annotation.Import;
 
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceTransactionManagerAutoConfiguration.class})
-@Import({ControllerHandler.class})
+//@Import({ControllerHandler.class})
 public class Application {
 
     public static void main(String[] args) {
