@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.spring.dao.StudentDao">
+    <resultMap id="StudentResultMap" type="com.example.spring.po.Student">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="age" property="age" jdbcType="INTEGER"/>
+        <result column="balance" property="balance" jdbcType="BIGINT"/>
+        <result column="weight" property="weight" jdbcType="DECIMAL"/>
+        <result column="birthday" property="birthday" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+
+    <insert id="insert" keyProperty="id" useGeneratedKeys="true">
+        insert into student (name,age,balance,weight,birthday)
+        value (#{name},#{age},#{balance},#{weight},#{birthday})
+    </insert>
+
+    <update id="update" parameterType="com.example.spring.po.Student">
+        update student
+        <set>
+            <if test="age">
+                age = #{age},
+            </if>
+            <if test="age">
+                balance = #{balance},
+            </if>
+            <if test="age">
+                weight = #{weight},
+            </if>
+            <if test="age">
+                birthday = #{birthday}
+            </if>
+        </set>
+        where name = #{name}
+    </update>
+
+    <select id="selectByNameAndAge" resultMap="StudentResultMap">
+        select * from student
+        <where>
+            <if test="name != null">
+                name = #{name}
+            </if>
+            <if test="age != null">
+                and age = #{age}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectByNames" resultMap="StudentResultMap" parameterType="list">
+        select * from student where name in
+        <foreach collection="names" close=")" index="index" separator="," open="(" item="name">
+            #{name}
+        </foreach>
+        and age = #{age}
+    </select>
+
+
+    <select id="selectByQuery" resultMap="StudentResultMap">
+        select * from student where name = #{query.name} and age = #{age}
+    </select>
+
+
+</mapper>

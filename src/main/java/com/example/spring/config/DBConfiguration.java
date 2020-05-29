@@ -9,12 +9,16 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import javax.sql.DataSource;
 
 @Configuration
-@MapperScan(basePackages = "com.example.spring.dao", sqlSessionTemplateRef = "sqlSessionTemplate")
+@PropertySource("classpath:database.properties")
+@MapperScan(basePackages = {"com.example.spring.dao"},sqlSessionTemplateRef = "sqlSessionTemplate")
 public class DBConfiguration {
 
     @Value("${db.url}")
@@ -37,7 +41,6 @@ public class DBConfiguration {
         dataSource.setInitialSize(20);
         dataSource.setMinIdle(20);
         dataSource.setMaxActive(100);
-
         //配置获取链接等待超时的时间
         dataSource.setMaxWait(60000);
         //配置间隔多久才能进行一次检测，检测需要关闭的控线连接，单位是毫秒
@@ -59,6 +62,8 @@ public class DBConfiguration {
     public SqlSessionFactory getSqlSessionFactory(
             @Qualifier("dbds") DataSource ds) throws Exception {
         SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+        bean.setMapperLocations(resolver.getResources("classpath:mapper/*.xml"));
         bean.setDataSource(ds);
         return bean.getObject();
     }
