@@ -19,20 +19,20 @@
 
     <update id="update" parameterType="com.example.spring.po.Student">
         update student
-        <set>
-            <if test="age">
+        <trim prefix="set" suffixOverrides=",">
+            <if test="age != null">
                 age = #{age},
             </if>
-            <if test="age">
+            <if test="balance != null">
                 balance = #{balance},
             </if>
-            <if test="age">
+            <if test="weight != null">
                 weight = #{weight},
             </if>
-            <if test="age">
+            <if test="birthday != null">
                 birthday = #{birthday}
             </if>
-        </set>
+        </trim>
         where name = #{name}
     </update>
 
@@ -60,6 +60,13 @@
     <select id="selectByQuery" resultMap="StudentResultMap">
         select * from student where name = #{query.name} and age = #{age}
     </select>
+
+    <insert id="insertBatch">
+        insert into student (name,age,balance,weight,birthday) value
+        <foreach collection="students" item="stu" separator=",">
+            (#{stu.name},#{stu.age},#{stu.balance},#{stu.weight},#{stu.birthday})
+        </foreach>
+    </insert>
 
 
 </mapper>

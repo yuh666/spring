@@ -34,12 +34,25 @@ public class StudentDaoTest {
     }
 
     @Test
+    public void testInsertBatch() {
+        ArrayList<Student> students = new ArrayList<>();
+        for (int i = 100; i < 200; i++) {
+            Student student = new Student();
+            student.setAge(10);
+            student.setName("name" + i);
+            student.setBirthday(new Date());
+            student.setBalance(10000L);
+            student.setWeight(BigDecimal.TEN);
+            students.add(student);
+        }
+        studentDao.insertBatch(students);
+    }
+
+    @Test
     public void testUpdate() {
         Student student = new Student();
-        student.setAge(100);
         student.setName("name1");
-        student.setBirthday(new Date());
-        student.setBalance(10L);
+        student.setAge(100000);
         student.setWeight(BigDecimal.ZERO);
         int update = studentDao.update(student);
         System.out.println(update);

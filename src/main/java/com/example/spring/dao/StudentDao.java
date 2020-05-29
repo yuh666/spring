@@ -3,6 +3,7 @@ package com.example.spring.dao;
 
 import com.example.spring.po.Query;
 import com.example.spring.po.Student;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,6 +23,8 @@ public interface StudentDao {
 
     List<Student> selectByNames(List<String> names, Integer age);
 
-    List<Student> selectByQuery(Query query,int age);
+    List<Student> selectByQuery(Query query, int age);
+
+    void insertBatch(@Param("students") List<Student> students);
 
 }
