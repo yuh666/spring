@@ -1,6 +1,7 @@
 package com.example.spring.mybatis;
 
 
+import com.example.spring.common.A;
 import com.example.spring.dao.StudentDao;
 import com.example.spring.po.Query;
 import com.example.spring.po.Student;
@@ -10,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -18,6 +20,15 @@ public class StudentDaoTest {
 
     @Autowired
     private StudentDao studentDao;
+
+    @Autowired
+    private A a;
+
+
+    @Test
+    public void testProxy(){
+        System.out.println(Arrays.toString(studentDao.getClass().getAnnotations()));
+    }
 
     @Test
     public void testInsert() {
@@ -70,14 +81,14 @@ public class StudentDaoTest {
         list.add("name1");
         list.add("name2");
         list.add("name3");
-        List<Student> students = studentDao.selectByNames(list, 10);
+        List<Student> students = studentDao.selectByNames(list, 100);
         System.out.println(students);
     }
 
     @Test
     public void testSelect3() {
         Query query = new Query();
-        query.setName("name1");
+        query.setName("name2");
         List<Student> students = studentDao.selectByQuery(query, 10);
         System.out.println(students);
     }
@@ -87,6 +98,12 @@ public class StudentDaoTest {
         String a = "abc";
         String b = "ab" + "c";
         System.out.println(a == b);
+    }
+
+
+    @Test
+    public void testAspect(){
+        a.abc();
     }
 
 }
