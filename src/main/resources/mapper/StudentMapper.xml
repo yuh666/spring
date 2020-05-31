@@ -61,6 +61,10 @@
         select * from student where name = #{query.name} and age = #{age}
     </select>
 
+    <select id="selectAll" resultMap="StudentResultMap">
+        select * from student
+    </select>
+
     <insert id="insertBatch">
         insert into student (name,age,balance,weight,birthday) value
         <foreach collection="students" item="stu" separator=",">

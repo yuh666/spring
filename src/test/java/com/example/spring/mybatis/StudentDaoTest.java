@@ -5,6 +5,8 @@ import com.example.spring.common.A;
 import com.example.spring.dao.StudentDao;
 import com.example.spring.po.Query;
 import com.example.spring.po.Student;
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,7 +28,7 @@ public class StudentDaoTest {
 
 
     @Test
-    public void testProxy(){
+    public void testProxy() {
         System.out.println(Arrays.toString(studentDao.getClass().getAnnotations()));
     }
 
@@ -94,6 +96,13 @@ public class StudentDaoTest {
     }
 
     @Test
+    public void testSelectAll() {
+        Page<Student> page = PageHelper.startPage(1, 10, true);
+        List<Student> students = studentDao.selectAll();
+        System.out.println(page);
+    }
+
+    @Test
     public void testString() {
         String a = "abc";
         String b = "ab" + "c";
@@ -102,7 +111,7 @@ public class StudentDaoTest {
 
 
     @Test
-    public void testAspect(){
+    public void testAspect() {
         a.abc();
     }
 

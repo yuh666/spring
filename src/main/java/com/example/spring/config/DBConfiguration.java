@@ -3,6 +3,8 @@ package com.example.spring.config;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.example.spring.common.DynamicDatasource;
 import com.example.spring.enums.DatasourceEnum;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInterceptor;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
 import org.mybatis.spring.SqlSessionTemplate;
@@ -18,6 +20,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 import javax.sql.DataSource;
 import java.util.HashMap;
+import java.util.Properties;
 
 @Configuration
 @PropertySource("classpath:database.properties")
@@ -72,7 +75,7 @@ public class DBConfiguration {
 
 
     @Bean(name = "dynamicDatasource")
-    public DataSource dynamicDatasource(@Qualifier("dbds") DataSource dataSource3306,@Qualifier("dbds1") DataSource dataSource3307) {
+    public DataSource dynamicDatasource(@Qualifier("dbds") DataSource dataSource3306, @Qualifier("dbds1") DataSource dataSource3307) {
         DynamicDatasource dynamicDatasource = new DynamicDatasource();
         HashMap<Object, Object> hashMap = new HashMap<>();
         hashMap.put(DatasourceEnum.BCC_3306, dataSource3306);
@@ -89,6 +92,14 @@ public class DBConfiguration {
         ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         bean.setMapperLocations(resolver.getResources("classpath:mapper/*.xml"));
         bean.setDataSource(ds);
+        PageInterceptor pageInterceptor = new PageInterceptor();
+        Properties properties = new Properties();
+        properties.setProperty("helperDialect","mysql");
+        properties.put("reasonable","true");
+        properties.put("supportMethodsArguments","true");
+        properties.put("autoRuntimeDialect","true");
+        pageInterceptor.setProperties(properties);
+        bean.setPlugins(pageInterceptor);
         return bean.getObject();
     }
 

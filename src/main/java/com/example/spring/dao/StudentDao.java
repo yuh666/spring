@@ -35,5 +35,8 @@ public interface StudentDao {
     List<Student> selectByQuery(Query query, int age);
 
     @TargetDatasource(DatasourceEnum.BCC_3306)
+    List<Student> selectAll();
+
+    @TargetDatasource(DatasourceEnum.BCC_3306)
     void insertBatch(@Param("students") List<Student> students);
 }
