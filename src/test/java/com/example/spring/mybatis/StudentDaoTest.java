@@ -96,6 +96,14 @@ public class StudentDaoTest {
     }
 
     @Test
+    public void testSelect4() {
+        Query query = new Query();
+        query.setName("name2");
+        List<Student> students = studentDao.selectByQueryAnno(query, 10, 1);
+        System.out.println(students);
+    }
+
+    @Test
     public void testSelectAll() {
         Page<Student> page = PageHelper.startPage(1, 10, true);
         List<Student> students = studentDao.selectAll();

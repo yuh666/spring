@@ -6,9 +6,12 @@ import com.example.spring.enums.DatasourceEnum;
 import com.example.spring.po.Query;
 import com.example.spring.po.Student;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 
 // 1.JDK8参数可以不写@Param直接取到参数名
 // 2.单个传list的话必须用list取
@@ -39,4 +42,25 @@ public interface StudentDao {
 
     @TargetDatasource(DatasourceEnum.BCC_3306)
     void insertBatch(@Param("students") List<Student> students);
+
+    @TargetDatasource(DatasourceEnum.BCC_3306)
+    @SelectProvider(type = Provider.class, method = "selectByQueryAnno")
+    List<Student> selectByQueryAnno(Query query, int age, int part);
+
+
+    class Provider {
+        public String selectByQueryAnno(Map<String, Object> para) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("select * from student_#{part} where 1=1 ");
+            Integer age = (Integer) para.get("age");
+            Query query = (Query) para.get("query");
+            if (query.getName() != null) {
+                sb.append("and name = #{query.name}");
+            }
+            if (age != null && age > 0) {
+                sb.append("and age = #{age}");
+            }
+            return sb.toString();
+        }
+    }
 }
