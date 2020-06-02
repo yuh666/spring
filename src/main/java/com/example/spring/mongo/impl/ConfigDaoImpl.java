@@ -4,10 +4,12 @@ import com.example.spring.mongo.ConfigDao;
 import com.example.spring.dao.QueryParamDto;
 import com.example.spring.po.Config;
 import com.example.spring.po.ConfigArgs;
+import com.mongodb.BasicDBObject;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -83,15 +85,18 @@ public class ConfigDaoImpl implements ConfigDao {
     public void delete(String id) {
         Criteria criteria = new Criteria();
         criteria.and("_id").is(id);
-        template.remove(new Query(criteria),"config");
+        template.remove(new Query(criteria), "config");
     }
 
     @Override
     public List<ConfigArgs> getArgs(String id) {
-        Criteria criteria = new Criteria();
-        criteria.and("_id").is(id);
-        Query query = new Query(criteria);
-        return template.find(query,ConfigArgs.class,"config");
+        BasicDBObject dbObject = new BasicDBObject();
+        dbObject.put("_id", id);
+        //指定返回的字段
+        BasicDBObject fieldsObject = new BasicDBObject();
+        fieldsObject.put("args", true);
+        Query query = new BasicQuery(dbObject.toJson(), fieldsObject.toJson());
+        return template.findOne(query,Config.class,"config").getArgs();
     }
 
     @Override

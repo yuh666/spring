@@ -6,6 +6,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.Date;
+import java.util.List;
 
 @Document(collection = "config")
 public class Config {
@@ -22,6 +23,8 @@ public class Config {
     private Date createTime;
     @Field(name = "update_time")
     private Date updateTime;
+    @Field(name = "args")
+    private List<ConfigArgs> args;
 
     public String getId() {
         return id;
@@ -69,6 +72,15 @@ public class Config {
 
     public void setUpdateTime(Date updateTime) {
         this.updateTime = updateTime;
+    }
+
+
+    public List<ConfigArgs> getArgs() {
+        return args;
+    }
+
+    public void setArgs(List<ConfigArgs> args) {
+        this.args = args;
     }
 
     @Override
