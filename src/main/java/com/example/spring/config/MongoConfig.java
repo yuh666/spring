@@ -11,7 +11,7 @@ import org.springframework.data.mongodb.core.SimpleMongoDbFactory;
 
 import java.net.UnknownHostException;
 
-@Configuration
+//@Configuration
 public class MongoConfig {
 
     @Bean

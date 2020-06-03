@@ -22,7 +22,7 @@ import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Properties;
 
-@Configuration
+//@Configuration
 @PropertySource("classpath:database.properties")
 @MapperScan(basePackages = {"com.example.spring.dao"}, sqlSessionTemplateRef = "sqlSessionTemplate")
 public class DBConfiguration {
