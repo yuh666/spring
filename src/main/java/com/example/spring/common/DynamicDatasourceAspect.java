@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 @Aspect
 public class DynamicDatasourceAspect {
 
-    @Pointcut("execution(* com.example.spring.dao..*(..))")
+    @Pointcut("execution(* com.example.spring.dao.mybatis..*(..))")
     public void method() {
 
     }

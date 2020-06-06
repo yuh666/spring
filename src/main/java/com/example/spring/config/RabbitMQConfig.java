@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 
-@Configuration
+//@Configuration
 @PropertySource("classpath:rabbitmq.properties")
 public class RabbitMQConfig {
 

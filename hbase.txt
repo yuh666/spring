@@ -1,21 +1,3 @@
- @Bean(name = "cloudClusterTemplate")
-    public HbaseTemplate cloudClusterTemplate() {
-        org.apache.hadoop.conf.Configuration configuration = HBaseConfiguration.create();
-        QuorumConfig config = NameSpaceUtils.getHbaseQuorumConfig(hbaseCloudNamespace, nsClient);
-        configuration.set(HConstants.ZOOKEEPER_QUORUM, config.getQuorum());
-        configuration.set(HConstants.ZOOKEEPER_CLIENT_PORT, config.getPort());
-        configuration.set(HConstants.CLIENT_WRITE_BUFFER, writeBufferSize);
-        configuration.set(HConstants.CLIENT_SCANNER_CACHING, scannerCachingSize);
-        configuration.set(HConstants.CLIENT_OPERATION_TIMEOUT, operationTimeout);
-        configuration.set(HConstants.CLIENT_SCAN_TIMEOUT, scanTimeout);
-        configuration.set(HConstants.CLIENT_SCAN_RPC_TIMEOUT, rpcTimeout);
-        configuration.set(HConstants.CLIENT_RETRIES_NUMBER, retryNum);
-        configuration.set(HConstants.CLIENT_PAUSE, clientPause);
-        return new HbaseTemplate(configuration);
-    }
-
-
-
 package com.zhangyue.durotan.dao.hbase.impl;
 
 import org.apache.commons.collections.CollectionUtils;

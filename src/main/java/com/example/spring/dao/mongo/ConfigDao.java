@@ -1,4 +1,4 @@
-package com.example.spring.mongo;
+package com.example.spring.dao.mongo;
 
 
 import com.example.spring.dao.QueryParamDto;

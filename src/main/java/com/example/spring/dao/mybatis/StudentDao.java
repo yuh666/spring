@@ -1,4 +1,4 @@
-package com.example.spring.dao;
+package com.example.spring.dao.mybatis;
 
 
 import com.example.spring.common.TargetDatasource;

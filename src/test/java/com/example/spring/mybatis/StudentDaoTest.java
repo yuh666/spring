@@ -2,7 +2,7 @@ package com.example.spring.mybatis;
 
 
 import com.example.spring.common.A;
-import com.example.spring.dao.StudentDao;
+import com.example.spring.dao.mybatis.StudentDao;
 import com.example.spring.po.Query;
 import com.example.spring.po.Student;
 import com.github.pagehelper.Page;

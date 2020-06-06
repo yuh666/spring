@@ -1,6 +1,6 @@
-package com.example.spring.mongo.impl;
+package com.example.spring.dao.mongo.impl;
 
-import com.example.spring.mongo.ConfigDao;
+import com.example.spring.dao.mongo.ConfigDao;
 import com.example.spring.dao.QueryParamDto;
 import com.example.spring.po.Config;
 import com.example.spring.po.ConfigArgs;
@@ -13,7 +13,6 @@ import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Repository;
 
 import java.util.Calendar;
 import java.util.List;
