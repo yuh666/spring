@@ -1,0 +1,592 @@
+ @Bean(name = "cloudClusterTemplate")
+    public HbaseTemplate cloudClusterTemplate() {
+        org.apache.hadoop.conf.Configuration configuration = HBaseConfiguration.create();
+        QuorumConfig config = NameSpaceUtils.getHbaseQuorumConfig(hbaseCloudNamespace, nsClient);
+        configuration.set(HConstants.ZOOKEEPER_QUORUM, config.getQuorum());
+        configuration.set(HConstants.ZOOKEEPER_CLIENT_PORT, config.getPort());
+        configuration.set(HConstants.CLIENT_WRITE_BUFFER, writeBufferSize);
+        configuration.set(HConstants.CLIENT_SCANNER_CACHING, scannerCachingSize);
+        configuration.set(HConstants.CLIENT_OPERATION_TIMEOUT, operationTimeout);
+        configuration.set(HConstants.CLIENT_SCAN_TIMEOUT, scanTimeout);
+        configuration.set(HConstants.CLIENT_SCAN_RPC_TIMEOUT, rpcTimeout);
+        configuration.set(HConstants.CLIENT_RETRIES_NUMBER, retryNum);
+        configuration.set(HConstants.CLIENT_PAUSE, clientPause);
+        return new HbaseTemplate(configuration);
+    }
+
+
+
+package com.zhangyue.durotan.dao.hbase.impl;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.hadoop.hbase.HbaseTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.zhangyue.durotan.common.exception.ServiceException;
+import com.zhangyue.durotan.common.hbase.HbaseQueryBean;
+import com.zhangyue.durotan.common.hbase.HbaseQueryResponse;
+import com.zhangyue.durotan.common.hbase.HbaseTemplateFactory;
+import com.zhangyue.durotan.dao.hbase.IHbaseDao;
+
+/**
+ * Hbase Dao 实现
+ *
+ * @author WangBonan
+ * @date 2019/1/2
+ */
+@Repository("hbaseDao")
+public class HbaseDaoImpl implements IHbaseDao {
+
+    private static final Logger LOG = LoggerFactory.getLogger(HbaseDaoImpl.class);
+
+    @Autowired
+    private HbaseTemplateFactory hbaseTemplateFactory;
+
+    @Override
+    public List<String> getTables(String cluster) {
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null cluster : {}", cluster);
+            return null;
+        }
+        List<String> res = new ArrayList<>();
+        try {
+            Configuration configuration = template.getConfiguration();
+            HBaseAdmin hBaseAdmin = new HBaseAdmin(configuration);
+            HTableDescriptor[] hTableDescriptors = hBaseAdmin.listTables();
+            for (HTableDescriptor hTableDescriptor : hTableDescriptors) {
+                res.add(new String(hTableDescriptor.getName(), "UTF-8"));
+            }
+        } catch (Exception e) {
+            LOG.error("queryHbaseTable exception cluster = {}", cluster, e);
+            throw new ServiceException("queryHbaseTable error!");
+        }
+        return res;
+    }
+
+    @Override
+    public HbaseQueryResponse get(String cluster, String table, String rowKey) {
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {}", cluster);
+            return null;
+        }
+        try {
+            // 查询rowKey行键中的所有值
+            return template.execute(table, hTableInterface -> {
+                Get get = new Get(rowKey.getBytes());
+                Result result = hTableInterface.get(get);
+                return getGetRes(result);
+            });
+        } catch (Exception e) {
+            LOG.error("Hbase get exception : cluster = {} , table = {} , rowKey = {}", cluster,
+                    table, rowKey, e);
+            throw new ServiceException("Hbase get error!");
+        }
+
+    }
+
+    @Override
+    public HbaseQueryResponse get(String cluster, String table, String rowKey, String family) {
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {}", cluster);
+            return null;
+        }
+        try {
+            // 查询rowKey行键里的列簇组中的所有列的值
+            return template.execute(table, hTableInterface -> {
+                Get get = new Get(rowKey.getBytes());
+                get.addFamily(family.getBytes());
+                Result result = null;
+                try {
+                    result = hTableInterface.get(get);
+                } catch (NoSuchColumnFamilyException e) {
+                    return null;
+                }
+                return getGetRes(result);
+            });
+        } catch (Exception e) {
+            LOG.error(
+                    "Hbase get exception : cluster = {} , table = {} , rowKey = {} , family = {} ",
+                    cluster, table, rowKey, family, e);
+            throw new ServiceException("Hbase get error!");
+        }
+    }
+
+    @Override
+    public HbaseQueryResponse get(String cluster, String table, String rowKey, String family,
+            String cols) {
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {} ", cluster);
+            return null;
+        }
+        try {
+            // 查询rowKey行键里的列簇组中的指定列的值
+            return template.execute(table, hTableInterface -> {
+                Get get = new Get(rowKey.getBytes());
+                Arrays.asList(cols.split(",")).forEach(
+                        col -> get.addColumn(family.getBytes(), col.getBytes()));
+                int count = 0;
+                HbaseQueryResponse hbaseQueryResponse = new HbaseQueryResponse();
+                List<HbaseQueryBean> list = new ArrayList<>();
+                Map<String, Integer> famValues = new HashMap<>();
+                int rowValues = 0;
+                int total = 0;
+                long time = new Date().getTime();
+                while (count++ < 1000) {
+                    get.setTimeRange(0, time);
+                    Result result = null;
+                    try {
+                        result = hTableInterface.get(get);
+                    } catch (NoSuchColumnFamilyException e) {
+                        break;
+                    }
+                    if (result.isEmpty()) {
+                        break;
+                    }
+                    List<KeyValue> keyValues = result.list();
+                    for (KeyValue keyValue : keyValues) {
+                        HbaseQueryBean hbaseQueryBean = new HbaseQueryBean();
+                        hbaseQueryBean.setRowKey(Bytes.toString(result.getRow()));
+                        hbaseQueryBean.setFam(Bytes.toString(keyValue.getFamily()));
+                        if (famValues.containsKey(Bytes.toString(keyValue.getFamily()))) {
+                            famValues.put(Bytes.toString(keyValue.getFamily()),
+                                    famValues.get(Bytes.toString(keyValue.getFamily())) + 1);
+                        } else {
+                            famValues.put(Bytes.toString(keyValue.getFamily()), 1);
+                        }
+                        hbaseQueryBean.setCol(Bytes.toString(keyValue.getQualifier()));
+                        hbaseQueryBean.setTimestamp(String.valueOf(keyValue.getTimestamp()));
+                        time = keyValue.getTimestamp();
+                        hbaseQueryBean.setVal(Bytes.toString(keyValue.getValue()));
+                        list.add(hbaseQueryBean);
+                        rowValues++;
+                    }
+                    total = 1;
+                }
+                if (CollectionUtils.isNotEmpty(list)) {
+                    Collections.sort(list, (kv1, kv2) -> {
+                        if (kv1.getFam().compareTo(kv1.getFam()) > 0) {
+                            return 1;
+                        } else if (kv1.getFam().compareTo(kv2.getFam()) < 0) {
+                            return -1;
+                        } else {
+                            return 0;
+                        }
+                    });
+                }
+                Set<String> fams = new HashSet<>();
+                Set<String> rowKeys = new HashSet<>();
+                // 给单元格合并赋值
+                for (HbaseQueryBean hbaseQueryBean : list) {
+                    if (StringUtils.isNotBlank(hbaseQueryBean.getRowKey()) && !rowKeys.contains(
+                            hbaseQueryBean.getRowKey())) {
+                        hbaseQueryBean.setRowKeyMer(rowValues);
+                        rowKeys.add(hbaseQueryBean.getRowKey());
+                    }
+                    if (StringUtils.isNotBlank(hbaseQueryBean.getFam()) && !fams.contains(
+                            hbaseQueryBean.getFam())) {
+                        hbaseQueryBean.setFamMer(famValues.get(hbaseQueryBean.getFam()));
+                        fams.add(hbaseQueryBean.getFam());
+                    }
+                }
+                hbaseQueryResponse.setTotal(total);
+                hbaseQueryResponse.setList(list);
+                return hbaseQueryResponse;
+            });
+
+        } catch (Exception e) {
+            LOG.error(
+                    "Hbase get exception :cluster = {} , table = {} , rowKey = {} , family = {} , cols = {}",
+                    cluster, table, rowKey, family, cols, e);
+            throw new ServiceException("Hbase get error!");
+        }
+    }
+
+    @Override
+    public HbaseQueryResponse get(String cluster, String table, String rowKey, String family,
+            String col, String type, String timeStamp) {
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {}", cluster);
+            return null;
+        }
+        try {
+            // 查询rowKey行键里的列簇组中的所有列的值
+            return template.execute(table, hTableInterface -> {
+                Get get = new Get(rowKey.getBytes());
+                get.addColumn(family.getBytes(), col.getBytes());
+                get.setTimeStamp(Long.valueOf(timeStamp));
+                Result result = null;
+                try {
+                    result = hTableInterface.get(get);
+                } catch (NoSuchColumnFamilyException e) {
+                    return null;
+                }
+                HbaseQueryResponse hbaseQueryResponse = new HbaseQueryResponse();
+                List<HbaseQueryBean> list = new ArrayList<>();
+                int total = 0;
+                if (!result.isEmpty()) {
+                    List<KeyValue> keyValues = result.list();
+                    for (KeyValue keyValue : keyValues) {
+                        HbaseQueryBean hbaseQueryBean = new HbaseQueryBean();
+                        hbaseQueryBean.setFam(Bytes.toString(keyValue.getFamily()));
+                        hbaseQueryBean.setCol(Bytes.toString(keyValue.getQualifier()));
+                        hbaseQueryBean.setTimestamp(String.valueOf(keyValue.getTimestamp()));
+                        hbaseQueryBean.setVal(getByType(keyValue.getValue(), type));
+                        hbaseQueryBean.setType(type);
+                        hbaseQueryBean.setRowKeyMer(1);
+                        hbaseQueryBean.setFamMer(1);
+                        list.add(hbaseQueryBean);
+                    }
+                    total = 1;
+                }
+                hbaseQueryResponse.setTotal(total);
+                hbaseQueryResponse.setList(list);
+                return hbaseQueryResponse;
+            });
+        } catch (Exception e) {
+            LOG.error(
+                    "Hbase get exception : cluster = {} , table = {} , rowKey = {} , family = {} ",
+                    cluster, table, rowKey, family, e);
+            throw new ServiceException("Hbase get error!");
+        }
+    }
+
+    @Override
+    public HbaseQueryResponse scan(String cluster, String table, String startRow, String endRow,
+            Integer maxCount, String family, String cols, int page, int pageSize) {
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {}", cluster);
+            return null;
+        }
+        Scan scan = new Scan();
+        scan.setStartRow(Bytes.toBytes(startRow));
+        scan.setStopRow(Bytes.toBytes(endRow));
+        if (StringUtils.isNotBlank(cols)) {
+            Arrays.asList(cols.split(",")).forEach(
+                    col -> scan.addColumn(family.getBytes(), col.getBytes()));
+        } else if (StringUtils.isNotBlank(family)) {
+            scan.addFamily(family.getBytes());
+        }
+        try {
+            return template.find(table, scan, (ResultScanner resultScanner) -> {
+                // 查询结果存储
+                HbaseQueryResponse hbaseQueryResponse = new HbaseQueryResponse();
+                List<HbaseQueryBean> list = new ArrayList<>();
+                // 前面有多少个记录
+                int pageFlag = (page - 1) * pageSize;
+                // 有多少条记录
+                int pageSizeFlag = 1 * pageSize;
+                int total = 0;
+                // 查询结果
+                List<Result> resultList = Arrays.asList(resultScanner.next(maxCount));
+                for (Result result : resultList) {
+                    total++;
+                    if (pageFlag-- > 0 || pageSizeFlag-- <= 0) {
+                        continue;
+                    }
+                    List<KeyValue> keyValues = result.list();
+                    Collections.sort(keyValues, (kv1, kv2) -> {
+                        if (Bytes.toString(kv1.getFamily()).compareTo(
+                                Bytes.toString(kv2.getFamily())) > 0) {
+                            return 1;
+                        } else if (Bytes.toString(kv1.getFamily()).compareTo(
+                                Bytes.toString(kv2.getFamily())) < 0) {
+                            return -1;
+                        } else {
+                            return 0;
+                        }
+                    });
+                    int rowValues = 0;
+                    Map<String, Integer> famValues = new HashMap<>();
+                    List<HbaseQueryBean> flag = new ArrayList<>();
+                    for (KeyValue keyValue : keyValues) {
+                        HbaseQueryBean hbaseQueryBean = new HbaseQueryBean();
+                        hbaseQueryBean.setRowKey(Bytes.toString(result.getRow()));
+                        hbaseQueryBean.setFam(Bytes.toString(keyValue.getFamily()));
+                        if (famValues.containsKey(Bytes.toString(keyValue.getFamily()))) {
+                            famValues.put(Bytes.toString(keyValue.getFamily()),
+                                    famValues.get(Bytes.toString(keyValue.getFamily())) + 1);
+                        } else {
+                            famValues.put(Bytes.toString(keyValue.getFamily()), 1);
+                        }
+                        hbaseQueryBean.setCol(Bytes.toString(keyValue.getQualifier()));
+                        hbaseQueryBean.setTimestamp(String.valueOf(keyValue.getTimestamp()));
+                        hbaseQueryBean.setVal(Bytes.toString(keyValue.getValue()));
+                        list.add(hbaseQueryBean);
+                        flag.add(hbaseQueryBean);
+                        rowValues++;
+                    }
+                    Set<String> fams = new HashSet<>();
+                    Set<String> rowKeys = new HashSet<>();
+                    for (HbaseQueryBean hbaseQueryBean : flag) {
+                        if (StringUtils.isNotBlank(hbaseQueryBean.getRowKey()) && !rowKeys.contains(
+                                hbaseQueryBean.getRowKey())) {
+                            hbaseQueryBean.setRowKeyMer(rowValues);
+                            rowKeys.add(hbaseQueryBean.getRowKey());
+                        }
+                        if (StringUtils.isNotBlank(hbaseQueryBean.getFam()) && !fams.contains(
+                                hbaseQueryBean.getFam())) {
+                            hbaseQueryBean.setFamMer(famValues.get(hbaseQueryBean.getFam()));
+                            fams.add(hbaseQueryBean.getFam());
+                        }
+                    }
+                }
+                hbaseQueryResponse.setTotal(total);
+                hbaseQueryResponse.setList(list);
+                return hbaseQueryResponse;
+            });
+        } catch (Exception e) {
+            LOG.error(
+                    "Hbase scan exception : cluster = {} , table = {} , startRow = {} ,endRow = {},maxCount = {}, family = {} , cols = {}",
+                    cluster, table, startRow, endRow, maxCount, family, cols, e);
+            throw new ServiceException("Hbase scan error!");
+        }
+    }
+
+    @Override
+    public boolean update(String cluster, String table, String rowKey, String family, String col,
+            String dataType, String value) {
+        LOG.info(
+                "updateDao, cluster = {}, table = {}, rowKey = {}, family = {}, col = {}, dataType = {}, value = {}",
+                cluster, table, rowKey, family, col, dataType, value);
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {}", cluster);
+            return false;
+        }
+        try {
+            return template.execute(table, (HTableInterface hTableInterface) -> {
+                Put put = new Put(Bytes.toBytes(rowKey));
+                add(put, family, col, value, dataType);
+                hTableInterface.put(put);
+                return true;
+            });
+        } catch (Exception e) {
+            LOG.error(
+                    "Hbase update exception: cluster = {}, table = {}, rowKey = {}, family = {}, col = {}, dataType = {}, value = {}",
+                    cluster, table, rowKey, family, col, dataType, value);
+            throw new ServiceException("Hbase update error");
+        }
+    }
+
+    @Override
+    public boolean delete(String cluster, String table, String rowKey, String family, String cols) {
+        LOG.info("deleteDao, cluster = {}, table = {}, rowKey = {}, family = {}, cols = {}",
+                cluster, table, rowKey, family, cols);
+        HbaseTemplate template = hbaseTemplateFactory.createHbaseTemplate(cluster);
+        if (template == null) {
+            LOG.warn("template is null, cluster : {}", cluster);
+            return false;
+        }
+        Delete delete = getDelete(rowKey, family, cols);
+        try {
+            return template.execute(table, (HTableInterface hTableInterface) -> {
+                hTableInterface.delete(delete);
+                return true;
+            });
+        } catch (Exception e) {
+            LOG.error(
+                    "Hbase delete exception : cluster = {}, table = {}, rowKey = {}, family = {}, cols = {}, e : ",
+                    cluster, table, rowKey, family, cols);
+            throw new ServiceException("Hbase delete error!");
+        }
+    }
+
+    /**
+     * 得到Delete
+     *
+     * @param rowKey 行键
+     * @param family 列簇
+     * @param cols   列名组
+     * @return
+     */
+    public static Delete getDelete(String rowKey, String family, String cols) {
+        Delete delete = new Delete(Bytes.toBytes(rowKey));
+        if (StringUtils.isBlank(family)) {
+            return delete;
+        }
+        if (StringUtils.isBlank(cols)) {
+            // 列簇不为空列名为空时，删除rowKey中列簇对应的列
+            delete.deleteFamily(Bytes.toBytes(family));
+        } else {
+            // 列簇不为空且列名不为空时，删除rowKey中列簇特定的columns列
+            Arrays.asList(cols.split(",")).forEach(
+                    col -> delete.deleteColumns(Bytes.toBytes(family), Bytes.toBytes(col)));
+        }
+        return delete;
+    }
+
+    /**
+     * 根据数据类型添加列值
+     *
+     * @param family 列簇
+     * @param col    列名
+     * @param value  列值
+     * @param type   列值数据类型
+     */
+    public static void add(Put put, String family, String col, String value, String type) {
+        byte[] vals;
+        try {
+            LOG.info("hbaseUpdate data change family = {}, col = {}, value = {}, type = {}", family,
+                    col, value, type);
+            if (type.equals("Int")) {
+                int val = Integer.valueOf(value);
+                vals = Bytes.toBytes(val);
+            } else if (type.equals("Boolean")) {
+                boolean val = Boolean.parseBoolean(value);
+                vals = Bytes.toBytes(val);
+            } else if (type.equals("Long")) {
+                long val = Long.valueOf(value);
+                vals = Bytes.toBytes(val);
+            } else if (type.equals("Float")) {
+                float val = Float.valueOf(value);
+                vals = Bytes.toBytes(val);
+            } else if (type.equals("Double")) {
+                double val = Double.valueOf(value);
+                vals = Bytes.toBytes(val);
+            } else if (type.equals("Short")) {
+                short val = Short.valueOf(value);
+                vals = Bytes.toBytes(val);
+            } else {
+                vals = Bytes.toBytes(value);
+            }
+        } catch (Exception e) {
+            LOG.error(
+                    "hbase update data change error, family = {}, col = {}, value = {}, type = {}",
+                    family, col, value, type);
+            throw new ServiceException("data change error");
+        }
+        put.add(Bytes.toBytes(family), Bytes.toBytes(col), vals);
+    }
+
+
+    private HbaseQueryResponse getGetRes(Result result) {
+        HbaseQueryResponse hbaseQueryResponse = new HbaseQueryResponse();
+        List<HbaseQueryBean> list = new ArrayList<>();
+        int total = 0;
+        if (!result.isEmpty()) {
+            List<KeyValue> keyValues = result.list();
+            Collections.sort(keyValues, (kv1, kv2) -> {
+                if (Bytes.toString(kv1.getFamily()).compareTo(
+                        Bytes.toString(kv2.getFamily())) > 0) {
+                    return 1;
+                } else if (Bytes.toString(kv1.getFamily()).compareTo(
+                        Bytes.toString(kv2.getFamily())) < 0) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
+            int rowValues = 0;
+            Map<String, Integer> famValues = new HashMap<>();
+            for (KeyValue keyValue : keyValues) {
+                HbaseQueryBean hbaseQueryBean = new HbaseQueryBean();
+                hbaseQueryBean.setRowKey(Bytes.toString(result.getRow()));
+                hbaseQueryBean.setFam(Bytes.toString(keyValue.getFamily()));
+                if (famValues.containsKey(Bytes.toString(keyValue.getFamily()))) {
+                    famValues.put(Bytes.toString(keyValue.getFamily()),
+                            famValues.get(Bytes.toString(keyValue.getFamily())) + 1);
+                } else {
+                    famValues.put(Bytes.toString(keyValue.getFamily()), 1);
+                }
+                hbaseQueryBean.setCol(Bytes.toString(keyValue.getQualifier()));
+                hbaseQueryBean.setTimestamp(String.valueOf(keyValue.getTimestamp()));
+                hbaseQueryBean.setVal(Bytes.toString(keyValue.getValue()));
+                list.add(hbaseQueryBean);
+                rowValues++;
+            }
+            Set<String> fams = new HashSet<>();
+            Set<String> rowKeys = new HashSet<>();
+            for (HbaseQueryBean hbaseQueryBean : list) {
+                if (StringUtils.isNotBlank(hbaseQueryBean.getRowKey()) && !rowKeys.contains(
+                        hbaseQueryBean.getRowKey())) {
+                    hbaseQueryBean.setRowKeyMer(rowValues);
+                    rowKeys.add(hbaseQueryBean.getRowKey());
+                }
+                if (StringUtils.isNotBlank(hbaseQueryBean.getFam()) && !fams.contains(
+                        hbaseQueryBean.getFam())) {
+                    hbaseQueryBean.setFamMer(famValues.get(hbaseQueryBean.getFam()));
+                    fams.add(hbaseQueryBean.getFam());
+                }
+            }
+            total = 1;
+        }
+        hbaseQueryResponse.setTotal(total);
+        hbaseQueryResponse.setList(list);
+        return hbaseQueryResponse;
+    }
+
+    /**
+     * 根据type将字节数组bytes转化为不同类型的数据
+     *
+     * @param bytes 原字节数组
+     * @param type  数据类型
+     * @return 转换后的数据转为String
+     */
+    public static String getByType(byte[] bytes, String type) {
+        String value = Bytes.toString(bytes);
+        try {
+            if (type.equals("Int")) {
+                int val = Bytes.toInt(bytes);
+                value = Integer.toString(val);
+            } else if (type.equals("Boolean")) {
+                boolean val = Bytes.toBoolean(bytes);
+                value = Boolean.toString(val);
+            } else if (type.equals("Long")) {
+                long val = Bytes.toLong(bytes);
+                value = Long.toString(val);
+            } else if (type.equals("Float")) {
+                float val = Bytes.toFloat(bytes);
+                value = Float.toString(val);
+            } else if (type.equals("Double")) {
+                double val = Bytes.toDouble(bytes);
+                value = Double.toString(val);
+            } else if (type.equals("Short")) {
+                short val = Bytes.toShort(bytes);
+                value = Short.toString(val);
+            }
+        } catch (Exception e) {
+            LOG.error("HbasePutUtils getByType exception : bytes = {}, type = {}",
+                    Bytes.toString(bytes), type, e);
+            value = Bytes.toString(bytes);
+        }
+        return value;
+
+    }
+
+
+}
