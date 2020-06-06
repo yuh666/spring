@@ -9,8 +9,16 @@ import org.springframework.data.redis.connection.stream.ByteRecord;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+
+//RowKey 设计原则
+//选定一个指定的主键  比如用户id等 用这个id作为分区键计算器 类似于Mysql之中的分表
+//选定Region的个数 一般是机器数量的3倍
+//选定一个排序条件 用于scan时候使用
+//rowKey = 分区键_主键_排序条件
 
 @SpringBootTest
 public class HbaseTest {
@@ -39,22 +47,25 @@ public class HbaseTest {
     }
 
     @Test
-    public void TestInsert() {
-        YuebingLog yuebingLog = new YuebingLog();
-        Date date = new Date();
-        yuebingLog.setId("yss_" + date.getTime());
-        yuebingLog.setCreateTime(date.toString());
-        yuebingLog.setMoney(1000);
-        yuebingLog.setUnit("yuan");
-        yuebingLog.setProductName("皇家美素佳儿");
-        dao.insert(yuebingLog);
+    public void TestInsert() throws InterruptedException {
+
+
+        for (int i = 0; i < 100; i++) {
+            YuebingLog yuebingLog = new YuebingLog();
+            Date date = new Date();
+            yuebingLog.setUserId("yss" + (i % 10));
+            yuebingLog.setCreateTime(date.toString());
+            yuebingLog.setMoney(1000 + i);
+            yuebingLog.setUnit("yuan");
+            yuebingLog.setProductName("皇家美素佳儿");
+            dao.insert(yuebingLog);
+
+            Thread.sleep(3);
+        }
+
+
     }
 
-    @Test
-    public void testGet() {
-        YuebingLog log = dao.get("yss_1591426417916");
-        System.out.println(log);
-    }
 
     @Test
     public void testByteBuffer() {
@@ -76,16 +87,10 @@ public class HbaseTest {
 
 
     @Test
-    public void testScan() {
-        Date startTime = new Date(Long.parseLong("1591426417916"));
-        Date endTime = new Date(Long.parseLong("159142661916"));
-        List<YuebingLog> list = dao.scan("yss", startTime, endTime);
+    public void testScan() throws ParseException {
+        List<YuebingLog> list = dao.scan("yss1", new SimpleDateFormat("yyyyMMddHHmmss").parse("20200606182010"),
+                new SimpleDateFormat("yyyyMMddHHmmss").parse("20200606182020"));
         System.out.println(list);
-    }
-
-    @Test
-    public void testDeleteById() {
-        dao.deleteById("yss_1591426417916");
     }
 
 }

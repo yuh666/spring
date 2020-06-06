@@ -11,8 +11,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.springframework.data.hadoop.hbase.HbaseTemplate;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class HbaseDao {
 
@@ -22,14 +24,15 @@ public class HbaseDao {
         this.template = template;
     }
 
-    public void createTable(String tableName, List<String> cfs) throws IOException {
+    public void createTable(String tableName, List<String> cfs, String[] partitionKeys) throws IOException {
         Connection connection = ConnectionFactory.createConnection(template.getConfiguration());
         Admin admin = connection.getAdmin();
         HTableDescriptor hTableDescriptor = new HTableDescriptor(TableName.valueOf(tableName));
         cfs.forEach(cf -> {
             hTableDescriptor.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
         });
-        admin.createTable(hTableDescriptor);
+        byte[][] keys = Arrays.stream(partitionKeys).map(Bytes::toBytes).collect(Collectors.toList()).toArray(new byte[0][]);
+        admin.createTable(hTableDescriptor, keys);
     }
 
     public boolean existsTable(String tableName) throws IOException {

@@ -3,8 +3,8 @@ package com.example.spring.po;
 import java.util.Date;
 
 public class YuebingLog {
-
-    private String id;
+    //cf user
+    private String userId;
     //cf money
     private Integer money;
     private String unit;
@@ -13,12 +13,13 @@ public class YuebingLog {
     //time
     private String createTime;
 
-    public String getId() {
-        return id;
+
+    public String getUserId() {
+        return userId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public Integer getMoney() {
@@ -56,11 +57,11 @@ public class YuebingLog {
     @Override
     public String toString() {
         return "YuebingLog{" +
-                "id='" + id + '\'' +
+                "userId='" + userId + '\'' +
                 ", money=" + money +
                 ", unit='" + unit + '\'' +
                 ", productName='" + productName + '\'' +
-                ", createTime=" + createTime +
+                ", createTime='" + createTime + '\'' +
                 '}';
     }
 }

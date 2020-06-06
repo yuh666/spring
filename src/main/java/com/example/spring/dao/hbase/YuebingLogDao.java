@@ -12,6 +12,7 @@ import org.springframework.data.hadoop.hbase.TableCallback;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -21,6 +22,16 @@ public class YuebingLogDao extends HbaseDao {
 
     private static final String TABLE_NAME = "yuebing_log";
 
+    private static final int PARTITONS = 10;
+
+    private static String[] KEYS = new String[PARTITONS];
+
+    static {
+        for (int i = 0; i < PARTITONS; i++) {
+            KEYS[i] = "0" + i;
+        }
+    }
+
     @Autowired
     public YuebingLogDao(HbaseTemplate template) {
         super(template);
@@ -29,10 +40,11 @@ public class YuebingLogDao extends HbaseDao {
 
     public void createTable() throws IOException {
         ArrayList<String> list = new ArrayList<>();
+        list.add("user");
         list.add("money");
         list.add("goods");
         list.add("time");
-        super.createTable(TABLE_NAME, list);
+        super.createTable(TABLE_NAME, list, KEYS);
     }
 
     public boolean existsTable() throws IOException {
@@ -48,8 +60,12 @@ public class YuebingLogDao extends HbaseDao {
     }
 
     public void insert(YuebingLog log) {
+        String datetime = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
+        String partitionKey = KEYS[log.getUserId().hashCode() % PARTITONS];
+        String rowKey = partitionKey + "_" + log.getUserId() + "_" + datetime;
         template.execute(TABLE_NAME, (TableCallback<Void>) hTableInterface -> {
-            Put put = new Put(Bytes.toBytes(log.getId()));
+            Put put = new Put(Bytes.toBytes(rowKey));
+            put.addColumn(Bytes.toBytes("user"), Bytes.toBytes("userId"), Bytes.toBytes(log.getMoney()));
             put.addColumn(Bytes.toBytes("money"), Bytes.toBytes("money"), Bytes.toBytes(log.getMoney()));
             put.addColumn(Bytes.toBytes("money"), Bytes.toBytes("unit"), Bytes.toBytes(log.getUnit()));
             put.addColumn(Bytes.toBytes("goods"), Bytes.toBytes("productName"), Bytes.toBytes(log.getProductName()));
@@ -60,39 +76,22 @@ public class YuebingLogDao extends HbaseDao {
     }
 
 
-    public YuebingLog get(String id) {
-        return template.get(TABLE_NAME, id, (RowMapper<YuebingLog>) (result, i) -> {
-            YuebingLog yuebingLog = new YuebingLog();
-            yuebingLog.setId(id);
-            yuebingLog.setMoney(result.getValueAsByteBuffer(Bytes.toBytes("money"), Bytes.toBytes("money")).getInt());
-            yuebingLog.setUnit(new String(result.getValue(Bytes.toBytes("money"), Bytes.toBytes("unit"))));
-            yuebingLog.setProductName(new String(result.getValue(Bytes.toBytes("goods"), Bytes.toBytes("productName"))));
-            yuebingLog.setCreateTime(new String(result.getValue(Bytes.toBytes("time"), Bytes.toBytes("createTime"))));
-            return yuebingLog;
-        });
-    }
-
     public List<YuebingLog> scan(String id, Date startTime, Date endTime) {
-        Scan scan = new Scan(Bytes.toBytes(id + "_" + startTime.getTime()), Bytes.toBytes(id + "_" + endTime.getTime()));
+        String start = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(startTime);
+        String end = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(endTime);
+        String partitionKey = KEYS[id.hashCode() % PARTITONS];
+        String rowKeyStart = partitionKey + "_" + id + "_" + start;
+        String rowKeyEnd = partitionKey + "_" + id + "_" + end;
+        Scan scan = new Scan(Bytes.toBytes(rowKeyStart), Bytes.toBytes(rowKeyEnd));
         return template.find(TABLE_NAME, scan, (result, i) -> {
             YuebingLog yuebingLog = new YuebingLog();
-            yuebingLog.setId(id);
+            yuebingLog.setUserId(id);
+            yuebingLog.setUserId(Bytes.toString(result.getValue(Bytes.toBytes("user"), Bytes.toBytes("userId"))));
             yuebingLog.setMoney(Bytes.toInt(result.getValue(Bytes.toBytes("money"), Bytes.toBytes("money"))));
             yuebingLog.setUnit(Bytes.toString(result.getValue(Bytes.toBytes("money"), Bytes.toBytes("unit"))));
             yuebingLog.setProductName(Bytes.toString(result.getValue(Bytes.toBytes("goods"), Bytes.toBytes("productName"))));
             yuebingLog.setCreateTime(Bytes.toString(result.getValue(Bytes.toBytes("time"), Bytes.toBytes("createTime"))));
             return yuebingLog;
-        });
-    }
-
-    public void deleteById(String id){
-        template.execute(TABLE_NAME, new TableCallback<Void>() {
-            @Override
-            public Void doInTable(HTableInterface hTableInterface) throws Throwable {
-                Delete delete = new Delete(Bytes.toBytes(id));
-                hTableInterface.delete(delete);
-                return null;
-            }
         });
     }
 
