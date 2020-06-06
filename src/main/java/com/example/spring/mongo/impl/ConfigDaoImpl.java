@@ -15,6 +15,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Repository;
 
+import java.util.Calendar;
 import java.util.List;
 
 
@@ -96,7 +97,7 @@ public class ConfigDaoImpl implements ConfigDao {
         BasicDBObject fieldsObject = new BasicDBObject();
         fieldsObject.put("args", true);
         Query query = new BasicQuery(dbObject.toJson(), fieldsObject.toJson());
-        return template.findOne(query,Config.class,"config").getArgs();
+        return template.findOne(query, Config.class, "config").getArgs();
     }
 
     @Override
@@ -110,5 +111,9 @@ public class ConfigDaoImpl implements ConfigDao {
         update.set("args", list);
         template.updateFirst(query, update, "config");
 
+    }
+
+    public static void main(String[] args) {
+        System.out.println(Calendar.getInstance().get(Calendar.YEAR));
     }
 }

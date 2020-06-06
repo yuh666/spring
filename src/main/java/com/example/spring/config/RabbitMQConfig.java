@@ -15,6 +15,7 @@ public class RabbitMQConfig {
     @Autowired
     private Environment env;
 
+
     @Bean
     public ConnectionFactory connectionFactory() {
         CachingConnectionFactory factory = new CachingConnectionFactory();
@@ -26,5 +27,8 @@ public class RabbitMQConfig {
         factory.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
         return factory;
     }
+
+
+
 
 }
