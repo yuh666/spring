@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-@Repository
+//@Repository
 public class YuebingLogDao extends HbaseDao {
 
     private static final String TABLE_NAME = "yuebing_log";
