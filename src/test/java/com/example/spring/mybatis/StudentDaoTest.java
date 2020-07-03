@@ -5,6 +5,7 @@ import com.example.spring.common.A;
 import com.example.spring.dao.StudentDao;
 import com.example.spring.po.Query;
 import com.example.spring.po.Student;
+import com.example.spring.service.TransService;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,9 @@ public class StudentDaoTest {
 
     @Autowired
     private A a;
+
+    @Autowired
+    private TransService transService;
 
 
     @Test
@@ -121,6 +125,11 @@ public class StudentDaoTest {
     @Test
     public void testAspect() {
         a.abc();
+    }
+
+    @Test
+    public void testTrans(){
+        transService.trans();
     }
 
 }
